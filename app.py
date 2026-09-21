@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import db
 import analytics
 import recommender
+import inference
 from datetime import date
 
 st.set_page_config(page_title="Workout Analytics Tracker", layout="wide")
@@ -19,8 +20,8 @@ db.init_db()
 st.title("🏋️ Workout Analytics Tracker")
 st.caption("Python + SQL + Pandas/NumPy + Streamlit/Plotly")
 
-tab_log, tab_history, tab_exercises, tab_analytics, tab_recommend = st.tabs(
-    ["➕ Log Workout", "📜 History", "📋 Exercises", "📊 Analytics", "🎯 Next Workout"]
+tab_log, tab_history, tab_exercises, tab_analytics, tab_recommend, tab_stats = st.tabs(
+    ["➕ Log Workout", "📜 History", "📋 Exercises", "📊 Analytics", "🎯 Next Workout", "🔬 Stats Lab"]
 )
 
 # ---------------- LOG WORKOUT ----------------
@@ -199,3 +200,81 @@ with tab_recommend:
                     f"**{p['exercise']}** ({p['muscle_group']}{niche_tag}) — "
                     f"{p['deficit_pct']} pts behind target, last trained {recency}"
                 )
+
+# ---------------- STATS LAB ----------------
+with tab_stats:
+    st.subheader("Statistical Inference & SQL Window Functions")
+    st.caption(
+        "Goes past descriptive charts: SQL window functions computed natively in the "
+        "database, and hypothesis tests (SciPy) that ask whether a pattern is real or noise."
+    )
+
+    exercises = db.get_all_exercises()
+    exercise_names = [e[1] for e in exercises]
+
+    if not exercise_names:
+        st.info("Log some workouts first to see statistical analysis.")
+    else:
+        selected = st.selectbox("Choose an exercise", exercise_names, key="stats_select")
+
+        st.markdown("### SQL window-function breakdown")
+        st.caption(
+            "One query: a CTE for per-session volume, `LAG()` for session-over-session "
+            "% change, a `ROWS BETWEEN` frame for a 3-session moving average, and `RANK()` "
+            "for best sessions — all computed in SQLite, not pandas."
+        )
+        rows, columns = db.get_session_volume_window_stats(selected)
+        if rows:
+            window_df = pd.DataFrame(rows, columns=columns).rename(columns={
+                "workout_date": "Date", "volume": "Volume",
+                "pct_change_vs_prev_session": "% Change vs Prev Session",
+                "rolling_3session_avg_volume": "3-Session Rolling Avg",
+                "volume_rank": "Volume Rank",
+            })
+            st.dataframe(window_df.sort_values("Date", ascending=False), use_container_width=True)
+        else:
+            st.info("No sessions logged yet for this exercise.")
+
+        st.divider()
+        st.markdown("### Is the progressive-overload trend statistically significant?")
+        st.caption(
+            "The Analytics tab reports a regression slope as a point estimate. This runs "
+            "the same regression via `scipy.stats.linregress` to get a p-value and a 95% "
+            "confidence interval, so 'trending up' becomes a testable claim, not just a sign."
+        )
+        trend_stats = inference.trend_significance(selected)
+        if trend_stats["significant"] is None:
+            st.info(trend_stats["message"])
+        else:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Slope (est. 1RM / session)", f"{trend_stats['slope']:+.2f} lbs")
+            c2.metric("p-value", f"{trend_stats['p_value']:.4f}")
+            c3.metric("R²", f"{trend_stats['r_squared']:.3f}")
+            if trend_stats["significant"]:
+                st.success(trend_stats["message"])
+            else:
+                st.warning(trend_stats["message"])
+
+        st.divider()
+        st.markdown("### Rep-range comparison (observational, not a randomized experiment)")
+        st.caption(
+            "Two-sample Welch's t-test comparing estimated 1RM between low-rep (<=6) and "
+            "high-rep (>=8) sets for this exercise. **Caveat, stated deliberately**: rep "
+            "range wasn't randomly assigned, and it's confounded with training time - so a "
+            "significant result here shows association, not that rep range alone causes it. "
+            "A real A/B test would randomize which rep range you trained in each session."
+        )
+        rep_stats = inference.rep_range_comparison(selected)
+        if rep_stats["significant"] is None:
+            st.info(rep_stats["message"])
+        else:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Mean est. 1RM, <=6 reps", f"{rep_stats['mean_est_1rm_low_rep']} lbs",
+                       help=f"n={rep_stats['n_low_rep']} sets")
+            c2.metric("Mean est. 1RM, >=8 reps", f"{rep_stats['mean_est_1rm_high_rep']} lbs",
+                       help=f"n={rep_stats['n_high_rep']} sets")
+            c3.metric("p-value", f"{rep_stats['p_value']:.4f}")
+            if rep_stats["significant"]:
+                st.success(rep_stats["message"])
+            else:
+                st.warning(rep_stats["message"])

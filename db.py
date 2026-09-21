@@ -105,6 +105,57 @@ def get_exercise_last_trained() -> dict:
     return {name: last for name, last in rows}
 
 
+def get_session_volume_window_stats(exercise_name: str):
+    """
+    Per-session volume for one exercise, annotated entirely in SQL via window
+    functions: LAG() for session-over-session % change, a 3-session moving
+    average via an explicit frame (ROWS BETWEEN), and RANK() to surface best
+    sessions - the CTE + window-function idioms behind cohort/retention-style
+    analytics queries, done natively instead of in pandas.
+    """
+    query = """
+        WITH session_volume AS (
+            SELECT w.workout_date AS workout_date, SUM(s.weight * s.reps) AS volume
+            FROM sets s
+            JOIN workouts w ON s.workout_id = w.id
+            JOIN exercises e ON s.exercise_id = e.id
+            WHERE e.name = ?
+            GROUP BY w.workout_date
+        )
+        SELECT
+            workout_date,
+            volume,
+            ROUND(
+                (volume - LAG(volume) OVER (ORDER BY workout_date)) * 100.0
+                / NULLIF(LAG(volume) OVER (ORDER BY workout_date), 0), 1
+            ) AS pct_change_vs_prev_session,
+            ROUND(AVG(volume) OVER (
+                ORDER BY workout_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+            ), 1) AS rolling_3session_avg_volume,
+            RANK() OVER (ORDER BY volume DESC) AS volume_rank
+        FROM session_volume
+        ORDER BY workout_date
+    """
+    with get_connection() as conn:
+        rows = conn.execute(query, (exercise_name,)).fetchall()
+    columns = ["workout_date", "volume", "pct_change_vs_prev_session",
+               "rolling_3session_avg_volume", "volume_rank"]
+    return rows, columns
+
+
+def get_sets_by_rep_range(exercise_name: str):
+    """Every individual set for one exercise (weight, reps) - the raw rows
+    the rep-range hypothesis test groups and compares."""
+    query = """
+        SELECT s.weight, s.reps
+        FROM sets s
+        JOIN exercises e ON s.exercise_id = e.id
+        WHERE e.name = ?
+    """
+    with get_connection() as conn:
+        return conn.execute(query, (exercise_name,)).fetchall()
+
+
 def get_exercise_avg_session_volume() -> dict:
     """Map of exercise name -> average total volume (weight x reps, summed
     per session) across sessions it has appeared in. Used by the recommender
