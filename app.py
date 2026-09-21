@@ -48,16 +48,13 @@ html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
     margin-top: 0.35rem;
 }
 
-button[data-baseweb="tab"] {
+[data-testid="stTab"] {
     font-family: 'Oswald', sans-serif;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     font-size: 0.82rem;
-    color: #8A8378;
 }
-button[data-baseweb="tab"][aria-selected="true"] { color: #1C1B1A; }
-[data-baseweb="tab-highlight"] { background-color: #C2410C !important; }
 
 [data-testid="stMetricValue"] { font-family: 'Oswald', sans-serif; font-weight: 600; }
 
