@@ -14,14 +14,79 @@ import recommender
 import inference
 from datetime import date
 
-st.set_page_config(page_title="Workout Analytics Tracker", layout="wide")
+ACCENT = "#C2410C"
+
+st.set_page_config(page_title="WRKOUTAHOLIC", layout="wide")
 db.init_db()
 
-st.title("🏋️ Workout Analytics Tracker")
-st.caption("Python + SQL + Pandas/NumPy + Streamlit/Plotly")
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+html, body, [class*="css"]  { font-family: 'Inter', sans-serif; }
+
+.wrk-header {
+    padding-bottom: 1.1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 3px solid #C2410C;
+}
+.wrk-wordmark {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 2.6rem;
+    letter-spacing: 0.03em;
+    color: #1C1B1A;
+    line-height: 1;
+}
+.wrk-tagline {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #C2410C;
+    margin-top: 0.35rem;
+}
+
+button[data-baseweb="tab"] {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.82rem;
+    color: #8A8378;
+}
+button[data-baseweb="tab"][aria-selected="true"] { color: #1C1B1A; }
+[data-baseweb="tab-highlight"] { background-color: #C2410C !important; }
+
+[data-testid="stMetricValue"] { font-family: 'Oswald', sans-serif; font-weight: 600; }
+
+.wrk-badge {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #C2410C;
+    border: 1px solid #C2410C;
+    border-radius: 3px;
+    padding: 0.05rem 0.35rem;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+div[data-testid="stAppViewContainer"] .block-container { padding-top: 3.5rem !important; max-width: 1100px; }
+</style>
+
+<div class="wrk-header">
+    <div class="wrk-wordmark">WRKOUTAHOLIC</div>
+    <div class="wrk-tagline">No paywalls. Just p-values.</div>
+</div>
+""", unsafe_allow_html=True)
 
 tab_log, tab_history, tab_exercises, tab_analytics, tab_recommend, tab_stats = st.tabs(
-    ["➕ Log Workout", "📜 History", "📋 Exercises", "📊 Analytics", "🎯 Next Workout", "🔬 Stats Lab"]
+    ["Log Workout", "History", "Exercises", "Analytics", "Next Workout", "Stats Lab"]
 )
 
 # ---------------- LOG WORKOUT ----------------
@@ -62,11 +127,11 @@ with tab_history:
 # ---------------- EXERCISES ----------------
 with tab_exercises:
     st.subheader("Exercise library")
-    st.caption("⭐ = niche exercise not typically found in mainstream tracker apps")
+    st.caption("NICHE = not typically found in mainstream tracker apps")
     exercises = db.get_all_exercises()
     if exercises:
         df = pd.DataFrame(exercises, columns=["id", "Name", "Muscle Group", "Niche"])
-        df["Niche"] = df["Niche"].apply(lambda x: "⭐" if x else "")
+        df["Niche"] = df["Niche"].apply(lambda x: "Niche" if x else "")
         st.dataframe(df[["Name", "Muscle Group", "Niche"]], use_container_width=True)
 
     with st.expander("Add a new exercise"):
@@ -103,7 +168,7 @@ with tab_analytics:
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=best_set_df["workout_date"], y=best_set_df["est_1rm"],
-                    mode="lines+markers", line=dict(color="#7c5cff")
+                    mode="lines+markers", line=dict(color="#C2410C")
                 ))
                 fig.update_layout(height=320, margin=dict(l=20, r=20, t=20, b=20))
                 st.plotly_chart(fig, use_container_width=True)
@@ -116,7 +181,7 @@ with tab_analytics:
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=volume_df["workout_date"], y=volume_df["volume"],
-                    mode="lines+markers", line=dict(color="#7c5cff")
+                    mode="lines+markers", line=dict(color="#C2410C")
                 ))
                 fig.update_layout(height=320, margin=dict(l=20, r=20, t=20, b=20))
                 st.plotly_chart(fig, use_container_width=True)
@@ -124,7 +189,7 @@ with tab_analytics:
                 st.info("No data yet for this exercise.")
 
         st.divider()
-        st.markdown("### 💡 Insights")
+        st.markdown("### Insights")
 
         trend = analytics.progressive_overload_trend(selected)
         pr = analytics.personal_records(selected)
@@ -138,7 +203,7 @@ with tab_analytics:
         with i2:
             st.metric("Trend", trend["message"] if trend["slope"] is None else f"{trend['slope']:+.1f} lbs/session")
         with i3:
-            st.metric("Plateau flag", "⚠️ Yes" if is_plateaued else "✅ No")
+            st.metric("Plateau flag", "Yes" if is_plateaued else "No")
 
         if trend["slope"] is not None:
             st.write(trend["message"])
@@ -146,12 +211,12 @@ with tab_analytics:
             st.warning(f"No new PR in your last several {selected} sessions — consider a deload, a rep-range change, or a form check.")
 
         st.divider()
-        st.markdown("### ⚖️ Muscle Group Balance (last 30 days)")
+        st.markdown("### Muscle Group Balance (Last 30 Days)")
         balance_df = analytics.muscle_group_balance(days=30)
         if not balance_df.empty:
             fig = go.Figure(data=[go.Bar(
                 x=balance_df["muscle_group"], y=balance_df["volume"],
-                marker_color="#7c5cff"
+                marker_color="#C2410C"
             )])
             fig.update_layout(height=320, margin=dict(l=20, r=20, t=20, b=20),
                                yaxis_title="Total Volume (lbs)")
@@ -183,7 +248,7 @@ with tab_recommend:
         )
         fig = go.Figure(data=[go.Bar(
             x=deficit_df["Muscle Group"], y=deficit_df["Deficit (pct pts below target)"],
-            marker_color="#7c5cff"
+            marker_color="#C2410C"
         )])
         fig.update_layout(height=280, margin=dict(l=20, r=20, t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
@@ -195,10 +260,11 @@ with tab_recommend:
             st.markdown("### Recommended exercises")
             for p in picks:
                 recency = "never trained" if p["days_since_trained"] is None else f'{p["days_since_trained"]}d ago'
-                niche_tag = " ⭐ niche" if p["is_niche"] else ""
-                st.write(
-                    f"**{p['exercise']}** ({p['muscle_group']}{niche_tag}) — "
-                    f"{p['deficit_pct']} pts behind target, last trained {recency}"
+                niche_badge = '<span class="wrk-badge">Niche</span>' if p["is_niche"] else ""
+                st.markdown(
+                    f"**{p['exercise']}** ({p['muscle_group']}){niche_badge} — "
+                    f"{p['deficit_pct']} pts behind target, last trained {recency}",
+                    unsafe_allow_html=True,
                 )
 
 # ---------------- STATS LAB ----------------
