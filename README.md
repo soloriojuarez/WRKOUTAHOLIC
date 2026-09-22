@@ -64,7 +64,7 @@ documentation a data team expects alongside the numbers themselves.
 
 ```bash
 pip install -r requirements.txt
-python seed_data.py     # generates ~3 months of sample data
+python seed_data.py    # generates ~3 months of sample data
 streamlit run app.py
 ```
 
