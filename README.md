@@ -1,6 +1,6 @@
 # Workout Analytics Tracker
 
-An interactive workout tracker built to go beyond simple logging — every screen
+An interactive workout tracker built to go beyond just simple logging — every screen
 is backed by real analysis of the underlying data, not just a table of numbers.
 Built as a portfolio project to demonstrate applied data analysis: SQL schema
 design, Python/Pandas data processing, and dashboard delivery.
