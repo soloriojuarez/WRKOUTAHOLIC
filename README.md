@@ -7,11 +7,10 @@ design, Python/Pandas data processing, and dashboard delivery.
 
 ## Why this project
 
-Most workout trackers (e.g. Strong) log sets and lock analytics behind a paid
+Most workout trackers log sets and lock analytics behind a paid
 tier. This project does the opposite: analytics and insights are the point,
 computed live from a relational database, and the exercise library includes
-niche movements (Jefferson Curl, Sissy Squat, Copenhagen Plank, etc.) that
-mainstream apps don't cover.
+niche movements that mainstream apps don't cover.
 
 ## Tech stack
 
