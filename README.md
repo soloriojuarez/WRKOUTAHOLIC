@@ -25,7 +25,7 @@ niche movements that mainstream apps don't cover.
 
 ## Features
 
-- **Log workouts** against a real exercise catalog (standard + niche lifts)
+- **Log workouts** against a real exercise catalog 
 - **History view** via a full SQL JOIN across all three tables
 - **Analytics tab**, including:
   - Estimated 1-rep-max trend per exercise (Epley formula)
